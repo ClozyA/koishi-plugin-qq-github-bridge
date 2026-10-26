@@ -1,0 +1,101 @@
+{
+  "name": "koishi-plugin-qq-github-bridge",
+  "version": "1.0.0",
+  "description": "通过 QQ 群安全评论、关闭和重开 GitHub Issue / PR，提供独立管理员与控制台管理。",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "dist",
+    "src",
+    "client",
+    "README.md",
+    "LICENSE",
+    "docs"
+  ],
+  "license": "MIT",
+  "author": "AoXuan (https://github.com/ClozyA)",
+  "homepage": "https://github.com/ClozyA/koishi-plugin-qq-github-bridge#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ClozyA/koishi-plugin-qq-github-bridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ClozyA/koishi-plugin-qq-github-bridge/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "keywords": [
+    "koishi",
+    "plugin",
+    "qq",
+    "onebot",
+    "napcat",
+    "github"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && node scripts/client-types.cjs && vue-tsc --noEmit -p client/tsconfig.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/build-client.cjs",
+    "test": "vitest run",
+    "preview": "npm run build && node scripts/preview-console.cjs",
+    "check": "npm run typecheck && npm run build && npm test",
+    "check:package": "node scripts/check-package.cjs",
+    "release:publish": "node scripts/publish-release.cjs",
+    "prepack": "npm run build"
+  },
+  "peerDependencies": {
+    "@koishijs/plugin-auth": "^4.1.7",
+    "@koishijs/plugin-console": "^5.30.11",
+    "koishi": "^4.18.11"
+  },
+  "peerDependenciesMeta": {
+    "@koishijs/plugin-console": {
+      "optional": true
+    },
+    "@koishijs/plugin-auth": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "re2-wasm": "^1.0.2"
+  },
+  "devDependencies": {
+    "@koishijs/client": "5.30.11",
+    "@koishijs/plugin-adapter-onebot": "6.0.2",
+    "@koishijs/plugin-auth": "4.1.7",
+    "@koishijs/plugin-console": "5.30.11",
+    "@koishijs/plugin-database-sqlite": "4.7.0",
+    "@koishijs/plugin-http": "0.6.3",
+    "@koishijs/plugin-server": "3.2.9",
+    "@types/node": "^22.0.0",
+    "@vitejs/plugin-vue": "6.0.10",
+    "happy-dom": "21.0.4",
+    "koishi": "4.18.11",
+    "tar": "7.5.22",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.5",
+    "vue": "^3.5.12",
+    "vue-tsc": "^3.1.0"
+  },
+  "koishi": {
+    "description": {
+      "zh": "QQ 群与 GitHub Issue / PR 桥接，独立权限、持久去重和后台管理。"
+    },
+    "service": {
+      "required": [
+        "database",
+        "http"
+      ],
+      "optional": [
+        "console",
+        "auth"
+      ]
+    },
+    "browser": false
+  }
+}

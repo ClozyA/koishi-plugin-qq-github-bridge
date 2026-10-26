@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "rootDir": "../node_modules",
+    "outDir": "../.generated/sdk",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noCheck": true
+  },
+  "include": [
+    "../node_modules/@koishijs/client/client/**/*",
+    "../node_modules/@koishijs/components/client/**/*",
+    "../node_modules/schemastery-vue/src/**/*"
+  ]
+}

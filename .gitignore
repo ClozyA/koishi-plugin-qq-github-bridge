@@ -1,0 +1,10 @@
+node_modules/
+lib/
+dist/
+.generated/
+coverage/
+*.tgz
+.test-data/
+.test-data-restart-*/
+.env*
+!.env.example

@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "paths": {
+      "@koishijs/client": ["../.generated/sdk/@koishijs/client/client/index.d.ts"],
+      "@koishijs/components": ["../.generated/sdk/@koishijs/components/client/index.d.ts"],
+      "schemastery-vue": ["../.generated/sdk/schemastery-vue/src/index.d.ts"]
+    },
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": ["./**/*.ts", "./**/*.vue", "../src/rpc.ts"]
+}
