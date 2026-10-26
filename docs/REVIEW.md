@@ -32,7 +32,7 @@
 Windows、PowerShell 7.6.9、Node 24.15.0、npm 12.0.2：
 
 - `npm ci`：成功。
-- 初次 `npm run check`：后端与 Vue 类型检查、构建成功；6 个测试文件、125 项测试通过。随后增加社区版 OneBot 6.9.4 解码兼容测试，runtime 文件的 24 项测试与类型检查均通过，总测试数增至 126。
+- 初次 `npm run check`：后端与 Vue 类型检查、构建成功；6 个测试文件、125 项测试通过。随后增加社区版 OneBot 6.9.4 解码兼容测试，完整 126 项测试与类型检查均通过；补充改动在 Ubuntu / Node 22、Ubuntu / Node 24、Windows / Node 24 三组 CI 也全部通过。
 - `npm audit --omit=dev`：0 项；增加社区适配器测试依赖后，完整开发依赖树为 26 项（19 moderate、7 high）。新增一项是社区适配器经由既有 Koishi peer dependency 产生的归因；未新增生产直接依赖。Koishi 等宿主依赖在此项目中作为 dev / peer 依赖，不能据此推导实际部署无漏洞。
 - 包文件与提取后 Koishi / SQLite 加载检查：`npm run check:package` 本地通过，并纳入 CI。
 - `v1.0.0` 的 Ubuntu / Node 22、Ubuntu / Node 24、Windows / Node 24 三组 CI 均通过，包含 125 项测试和包加载检查；GitHub Release 由标签流水线成功创建。后续版本以仓库 Actions、GitHub Releases 和 npm registry 为准。
