@@ -3,6 +3,7 @@ lib/
 dist/
 .generated/
 coverage/
+release/
 *.tgz
 .test-data/
 .test-data-restart-*/

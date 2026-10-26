@@ -28,7 +28,7 @@
 | QQ | OneBot v11 / NapCat 群消息，Koishi 平台名必须是 `onebot` |
 | 后台页面 | `console` ^5.30.11 + `auth` ^4.1.7，使用已登录的部署管理员账号 |
 
-本插件不安装或接管 QQ 适配器。当前发布的官方 `adapter-onebot` 6.0.2 已被上游标记为停止官方支持；本次验证了该包的事件解码器与 Koishi 的衔接，**没有登录真实 QQ，也没有连接真实 NapCat**。选择其他兼容实现后，需要按 [真实环境验收步骤](docs/TESTING.md) 检查其事件字段。
+本插件不安装或接管 QQ 适配器。事件解码集成测试覆盖官方 `@koishijs/plugin-adapter-onebot` 6.0.2 和社区版 `koishi-plugin-adapter-onebot` 6.9.4。官方 6.0.2 已被上游标记为停止官方支持。测试使用人工构造事件，**没有登录真实 QQ，也没有连接真实 NapCat**。实际连接后仍需按 [真实环境验收步骤](docs/TESTING.md) 检查字段及消息投递。
 
 ## 安装
 
@@ -153,7 +153,7 @@ npm pack
 
 `.tgz` 包含 `lib/`、`dist/`、`src/`、`client/`、文档与许可证，兼容已安装插件的开发模式与源码调试；完整源码交付另外包含测试、锁文件和构建脚本。Koishi 是 peer dependency，唯一直接运行依赖为 `re2-wasm`。
 
-CI 在 Linux（Node 22 / 24）和 Windows（Node 24）执行静态检查、构建、125 项自动化测试和实际安装包加载检查。
+CI 在 Linux（Node 22 / 24）和 Windows（Node 24）执行静态检查、构建、126 项自动化测试和实际安装包加载检查。
 
 维护者发布新版本时，在 PowerShell 7（`pwsh`）运行：
 

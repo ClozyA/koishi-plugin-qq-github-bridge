@@ -32,14 +32,14 @@
 Windows、PowerShell 7.6.9、Node 24.15.0、npm 12.0.2：
 
 - `npm ci`：成功。
-- `npm run check`：后端与 Vue 类型检查、构建成功；6 个测试文件、125 项测试通过。
-- `npm audit --omit=dev`：0 项；完整开发依赖树仍有 25 项（18 moderate、7 high）。Koishi 等宿主依赖在此项目中作为 dev / peer 依赖，不能据此推导实际部署无漏洞。
-- 包文件与提取后 Koishi / SQLite 加载检查：使用 `npm run check:package` 在本次发布前验证，并纳入 CI。
-- Linux / Windows runner 的 CI 与公开发布状态：以仓库 Actions、GitHub Releases 和 npm registry 为准。
+- 初次 `npm run check`：后端与 Vue 类型检查、构建成功；6 个测试文件、125 项测试通过。随后增加社区版 OneBot 6.9.4 解码兼容测试，runtime 文件的 24 项测试与类型检查均通过，总测试数增至 126。
+- `npm audit --omit=dev`：0 项；增加社区适配器测试依赖后，完整开发依赖树为 26 项（19 moderate、7 high）。新增一项是社区适配器经由既有 Koishi peer dependency 产生的归因；未新增生产直接依赖。Koishi 等宿主依赖在此项目中作为 dev / peer 依赖，不能据此推导实际部署无漏洞。
+- 包文件与提取后 Koishi / SQLite 加载检查：`npm run check:package` 本地通过，并纳入 CI。
+- `v1.0.0` 的 Ubuntu / Node 22、Ubuntu / Node 24、Windows / Node 24 三组 CI 均通过，包含 125 项测试和包加载检查；GitHub Release 由标签流水线成功创建。后续版本以仓库 Actions、GitHub Releases 和 npm registry 为准。
 
 ## 仍需真实环境验收的边界
 
-1. 尚未连接真实 NapCat / QQ。现有 runtime 测试使用官方 OneBot 6.0.2 的解码器和人工事件；该适配器已被上游标为停止官方支持，需实测所选兼容实现的字段。
+1. 尚未连接真实 NapCat / QQ。现有 runtime 测试使用官方 OneBot 6.0.2、社区版 OneBot 6.9.4 的解码器和人工事件；前者已被上游标为停止官方支持。实际部署仍需实测所选实现的字段与消息链路。
 2. GitHub HTTP 测试请求本机模拟服务器，未用真实 PAT 评论或修改 Issue / PR。
 3. 本次没有重复执行完整后台浏览器交互验收；已有 Vue 组件及带真实 auth / SQLite 的 RPC 测试通过。历史交付的浏览器检查记录见 TESTING，不把历史记录描述成本次重新实测。
 4. 并发队列按插件实例工作；去重主键可跨实例，但多进程共享数据库的权限 / 冷却 / 状态更新事务不在第一版承诺范围。推荐同一 Koishi 应用只启用一个桥接实例。

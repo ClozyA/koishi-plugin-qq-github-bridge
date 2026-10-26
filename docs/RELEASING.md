@@ -11,7 +11,7 @@ npm：https://www.npmjs.com/package/koishi-plugin-qq-github-bridge
 `ci.yml` 在 main 推送、Pull Request 及手动触发时运行：
 
 - Ubuntu / Node 22、Ubuntu / Node 24、Windows / Node 24。
-- `npm ci`、后端与 Vue 类型检查、构建、125 项自动化测试。
+- `npm ci`、后端与 Vue 类型检查、构建、全量自动化测试（当前 126 项）。
 - `npm run check:package` 检查真实 npm 文件列表，将 tarball 解压到临时目录，加载发布入口，并用 Koishi / HTTP / SQLite 启动和读写管理员表。宿主依赖来自已安装的开发环境；这项检查不代表真实 QQ 或外部 GitHub 验证。
 
 GitHub Actions 使用固定 commit，检查作业仅有仓库读取权限。开发依赖的上游审计告警不被当作零风险；详情见 REVIEW 和 TESTING。

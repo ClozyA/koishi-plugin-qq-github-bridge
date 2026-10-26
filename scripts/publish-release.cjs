@@ -24,7 +24,13 @@ async function main() {
   assert.equal(response.status, 404, `Registry lookup failed: HTTP ${response.status}`)
   const result = spawnSync(process.execPath, [cli, 'publish', file, '--access', 'public', '--provenance', '--ignore-scripts', '--tag', version.includes('-') ? 'next' : 'latest'], { stdio: 'inherit' })
   assert.equal(result.status, 0, 'npm publish failed.')
-  const check = await fetch(`https://registry.npmjs.org/${name}/${version}`)
+  // A newly published version can take a moment to become visible at the edge.
+  let check
+  for (let attempt = 0; attempt < 6; attempt++) {
+    check = await fetch(`https://registry.npmjs.org/${name}/${version}`, { headers: { 'Cache-Control': 'no-cache' } })
+    if (check.ok || (check.status !== 404 && check.status < 500)) break
+    if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 1000 * 2 ** attempt))
+  }
   assert.ok(check.ok, 'Published package could not be read back from the registry.')
   const published = await check.json()
   assert.equal(published.dist?.integrity, `sha512-${digest}`, 'Published tarball integrity does not match.')

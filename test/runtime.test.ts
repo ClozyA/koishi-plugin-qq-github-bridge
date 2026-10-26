@@ -3,6 +3,7 @@ import { Context, h, Universal, type Session } from 'koishi'
 import { HTTP } from '@koishijs/plugin-http'
 import Sqlite from '@koishijs/plugin-database-sqlite'
 import { OneBot } from '@koishijs/plugin-adapter-onebot'
+import { OneBot as CommunityOneBot } from 'koishi-plugin-adapter-onebot'
 import { FixtureBot, MockGitHub, configuration, BOT, GROUP, SECRET, SUPER, USER } from './helpers'
 import { readMessage } from '../src/handlers/message'
 import { RepositoryResolver } from '../src/services/repository'
@@ -38,7 +39,10 @@ describe('actual Koishi middleware and lifecycle with OneBot event fixtures', ()
     expect(api.requests.at(-1)?.body?.body).toContain('**真实 Koishi 消息管线** <xml> &\n第二行')
     expect(app.console).toBeUndefined()
   })
-  it('accepts sessions decoded by the released official OneBot adapter', async () => {
+  it.each([
+    ['official 6.0.2', OneBot],
+    ['community 6.9.4', CommunityOneBot],
+  ] as const)('accepts sessions decoded by the released %s OneBot adapter', async (_name, adapter) => {
     bot.config.advanced = { splitMixedContent: false }
     const raw = {
       post_type: 'message', message_type: 'group', sub_type: 'normal', time: Math.floor(Date.now() / 1000),
@@ -46,7 +50,7 @@ describe('actual Koishi middleware and lifecycle with OneBot event fixtures', ()
       message: [{ type: 'text', data: { text: 're1004 <hello> & 中文\nsecond' } }],
       raw_message: 're1004 <hello> & 中文\nsecond', sender: { user_id: Number(USER), nickname: '来自适配器' },
     }
-    const session = await OneBot.adaptSession(bot as never, raw as never) as unknown as Session
+    const session = await adapter.adaptSession(bot as never, raw as never) as unknown as Session
     session.setInternal('onebot', raw)
     await dispatch(session)
     expect(bot.replies.at(-1)).toContain('PR #1004')
