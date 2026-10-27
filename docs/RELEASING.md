@@ -11,21 +11,21 @@ npm：https://www.npmjs.com/package/koishi-plugin-qq-github-bridge
 `ci.yml` 在 main 推送、Pull Request 及手动触发时运行：
 
 - Ubuntu / Node 22、Ubuntu / Node 24、Windows / Node 24。
-- `npm ci`、后端与 Vue 类型检查、构建、全量自动化测试（当前 126 项）。
+- `npm ci`、后端与 Vue 类型检查、构建、全量自动化测试（当前 129 项）。
 - `npm run check:package` 检查真实 npm 文件列表，将 tarball 解压到临时目录，加载发布入口，并用 Koishi / HTTP / SQLite 启动和读写管理员表。宿主依赖来自已安装的开发环境；这项检查不代表真实 QQ 或外部 GitHub 验证。
 
 GitHub Actions 使用固定 commit，检查作业仅有仓库读取权限。开发依赖的上游审计告警不被当作零风险；详情见 REVIEW 和 TESTING。
 
 ## 首次 npm 初始化
 
-npm 官方要求包已存在才能配置可信发布。先通过本机已登录 npm 完成首版，再配置 OIDC：
+此仓库已于 2026-10-27 完成初始化：npm 首版 `1.0.0` 已公开，`release.yml` 的 OIDC 信任关系已建立，仓库变量 `NPM_PUBLISH_ENABLED=true` 已启用。维护者后续只需按下一节推送版本标签。本次初始化使用 npm 12.2.1。
+
+以下为重建发布配置时的参考步骤。npm 官方要求包已存在才能配置可信发布；先从 GitHub Release 下载经过 CI 验证的安装包，通过本机已登录 npm 完成首版，再配置 OIDC：
 
 ```powershell
 npm login --auth-type=web --registry=https://registry.npmjs.org
-npm run check
-npm run check:package
-npm pack
-npm publish ./koishi-plugin-qq-github-bridge-1.0.0.tgz --access public --ignore-scripts
+gh release download v1.0.0 --repo ClozyA/koishi-plugin-qq-github-bridge --dir release
+npm publish ./release/koishi-plugin-qq-github-bridge-1.0.0.tgz --access public --ignore-scripts
 npm trust github koishi-plugin-qq-github-bridge --repo ClozyA/koishi-plugin-qq-github-bridge --file release.yml --allow-publish --yes
 npm trust list koishi-plugin-qq-github-bridge
 gh variable set NPM_PUBLISH_ENABLED --repo ClozyA/koishi-plugin-qq-github-bridge --body true
@@ -53,7 +53,7 @@ git push origin --tags
 2. 完整检查、构建、验证 npm 包，再产出唯一 tarball 与 SHA256SUMS。
 3. 创建 GitHub Release 并附安装包和校验值。
 4. 当仓库变量 `NPM_PUBLISH_ENABLED=true` 时，通过 npm OIDC 发布该 tarball。稳定版用 `latest`；带预发布后缀的版本用 `next`，GitHub Release 也标记为预发布。
-5. 发布后读取 npm registry，比对 tarball 的 SHA512 integrity。
+5. 发布后等待 npm 处理及 registry 可见性，最多约 5 分钟，再比对 tarball 的 SHA512 integrity。只重试读取；不会再次上传同一版本。
 
 NPM_PUBLISH_ENABLED 只控制 npm 作业；GitHub Release 不依赖 npm 凭据。未设置该变量时，npm 作业会跳过，不能将此描述为 npm 已发布。
 

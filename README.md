@@ -153,7 +153,7 @@ npm pack
 
 `.tgz` 包含 `lib/`、`dist/`、`src/`、`client/`、文档与许可证，兼容已安装插件的开发模式与源码调试；完整源码交付另外包含测试、锁文件和构建脚本。Koishi 是 peer dependency，唯一直接运行依赖为 `re2-wasm`。
 
-CI 在 Linux（Node 22 / 24）和 Windows（Node 24）执行静态检查、构建、126 项自动化测试和实际安装包加载检查。
+CI 在 Linux（Node 22 / 24）和 Windows（Node 24）执行静态检查、构建、129 项自动化测试和实际安装包加载检查。
 
 维护者发布新版本时，在 PowerShell 7（`pwsh`）运行：
 

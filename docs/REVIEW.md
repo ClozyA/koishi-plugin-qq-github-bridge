@@ -47,3 +47,10 @@ Windows、PowerShell 7.6.9、Node 24.15.0、npm 12.0.2：
 5. Token 属于一个 GitHub 账号；Fine-grained PAT 的单资源所有者限制需要部署者按绑定仓库安排。
 
 真实环境验收步骤见 TESTING。公开发布是分发验证，不能代替这些运行验收。
+
+## 2026-10-27 发布验证补充
+
+- `1.0.0` 已在 npm 公开发布，registry 安装包 SHA512 integrity 与 GitHub Release 的 tarball 一致。
+- npm OIDC 已绑定 `ClozyA/koishi-plugin-qq-github-bridge` 的 `release.yml`，CI 已实际发布 `1.0.1`，registry 返回 SLSA v1 来源证明，tarball integrity 与 GitHub Release 一致。
+- `1.0.1` 首次运行发现 npm 后台处理导致发布后暂时 404，原脚本等待过短；registry 可见后重跑成功且未重复上传。已修正为有界等待与读取重试，新增 3 项回归测试，覆盖超过一分钟后可见、永久权限错误以及达到等待上限。`1.0.2` 发布前全量 129 项测试、类型检查、构建和包加载检查均通过。
+- 部署者提供的 Koishi 实例仍显示无法连接插件市场，未在该实例安装或启用本插件；不把源码与 npm 验证描述为真实 QQ / GitHub 业务链路验收。
