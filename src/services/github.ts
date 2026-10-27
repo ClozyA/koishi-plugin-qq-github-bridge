@@ -1,4 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises'
+import { createSign } from 'node:crypto'
 import type { Context } from 'koishi'
 import type { Config } from '../config'
 import type { Actor, Outcome, Repository, TokenStatus } from '../types'
@@ -17,6 +18,8 @@ export class GitHub {
   private readonly base: string
   private blockedUntil = 0
   private lastMutation = 0
+  private appToken?: { value: string; expires: number }
+  private tokenRequest?: Promise<string>
 
   constructor(private readonly ctx: Context, private readonly config: Config) {
     this.base = config.apiBaseUrl.replace(/\/+$/, '')
@@ -30,9 +33,55 @@ export class GitHub {
     }
   }
 
+  private jwt(): string {
+    const now = Math.floor(Date.now() / 1000)
+    const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url')
+    const payload = `${encode({ alg: 'RS256', typ: 'JWT' })}.${encode({ iat: now - 60, exp: now + 540, iss: this.config.appId })}`
+    const signature = createSign('RSA-SHA256').update(payload).sign(this.config.privateKey.replace(/\\n/g, '\n'), 'base64url')
+    return `${payload}.${signature}`
+  }
+
+  private async appRequest<T>(method: 'GET' | 'POST', path: string, credential: string): Promise<T> {
+    if (this.abort.signal.aborted) throw new BridgeError('disposed', '插件正在停用，请稍后再试。')
+    try {
+      const response = await this.ctx.http(this.base + path, {
+        method, headers: { Authorization: `Bearer ${credential}`, Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': this.config.apiVersion, 'User-Agent': 'koishi-plugin-qq-github-bridge/1.0.0' },
+        timeout: this.config.requestTimeout, signal: this.abort.signal, redirect: 'manual', validateStatus: () => true,
+      })
+      if (response.status < 200 || response.status >= 300) throw new BridgeError('app-auth', `GitHub App 认证失败（HTTP ${response.status}），请检查 App ID、私钥、安装 ID 和权限。`)
+      return response.data as T
+    } catch (error) {
+      if (error instanceof BridgeError) throw error
+      throw new BridgeError('app-auth', 'GitHub App 认证请求失败，请检查网络和配置。')
+    }
+  }
+
+  private async credential(): Promise<string> {
+    if (this.config.authMode !== 'app') return this.config.token
+    if (this.appToken && this.appToken.expires > Date.now() + 60000) return this.appToken.value
+    if (!this.tokenRequest) {
+      this.tokenRequest = (async () => {
+        const result = await this.appRequest<{ token?: unknown; expires_at?: unknown }>('POST', `/app/installations/${this.config.installationId}/access_tokens`, this.jwt())
+        const expires = typeof result?.expires_at === 'string' ? Date.parse(result.expires_at) : NaN
+        if (typeof result?.token !== 'string' || !result.token || result.token.length > 16384 || /\s|[^\x21-\x7e]/.test(result.token) || !Number.isFinite(expires) || expires <= Date.now() + 60000) {
+          throw new BridgeError('app-auth', 'GitHub App 返回的安装令牌无效或即将过期。')
+        }
+        this.appToken = { value: result.token, expires }
+        return result.token
+      })().finally(() => { this.tokenRequest = undefined })
+    }
+    return this.tokenRequest
+  }
+
+  private containsSecret(value: string): boolean {
+    return [this.config.token, this.config.privateKey, this.config.privateKey.replace(/\\n/g, '\n'), this.appToken?.value].some(secret => !!secret && value.includes(secret))
+  }
+
   private async request<T>(method: 'GET' | 'POST' | 'PATCH', path: string, data?: object): Promise<T> {
     if (this.abort.signal.aborted) throw new BridgeError('disposed', '插件正在停用，请稍后再试。')
     if (this.blockedUntil > Date.now()) throw new BridgeError('rate-limit', `GitHub 限流中，请在约 ${Math.ceil((this.blockedUntil - Date.now()) / 1000)} 秒后再试。`)
+    const credential = await this.credential()
     const writing = method !== 'GET'
     if (writing) {
       const wait = 1000 - (Date.now() - this.lastMutation)
@@ -45,7 +94,7 @@ export class GitHub {
         response = await this.ctx.http(this.base + path, {
           method, data,
           headers: {
-            Authorization: `Bearer ${this.config.token}`,
+            Authorization: `Bearer ${credential}`,
             Accept: 'application/vnd.github+json',
             'X-GitHub-Api-Version': this.config.apiVersion,
             'User-Agent': 'koishi-plugin-qq-github-bridge/1.0.0',
@@ -106,12 +155,12 @@ export class GitHub {
   }
 
   private link(value: unknown): string | undefined {
-    if (typeof value !== 'string' || value.length > 2000 || value.includes(this.config.token)) return
+    if (typeof value !== 'string' || value.length > 2000 || this.containsSecret(value)) return
     try {
       const url = new URL(value)
       // html_url is returned by the trusted API, never used as a request target.
       // Proxies / Enterprise Cloud can have a different API and web hostname.
-      if (url.username || url.password || url.search || decodeURIComponent(value).includes(this.config.token)) return
+      if (url.username || url.password || url.search || this.containsSecret(decodeURIComponent(value))) return
       if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname))) return
       return url.href
     } catch { return }
@@ -126,7 +175,7 @@ export class GitHub {
   }
 
   formatComment(actor: Actor, body: string, eventKey: string): string {
-    if (body.includes(this.config.token)) throw new BridgeError('secret-in-body', '评论包含部署 Token，已拒绝发送。请移除敏感信息。')
+    if (this.containsSecret(body)) throw new BridgeError('secret-in-body', '评论包含部署凭据，已拒绝发送。请移除敏感信息。')
     const nickname = metadata(redact(actor.nickname, this.config.token))
     const header = `<sub>QQ Bridge 已验证发送者 · 昵称：「${nickname}」 · QQ：${actor.qq} · QQ群：${actor.groupId}</sub>`
     const comment = `${header}\n\n---\n\n${this.config.commentTemplate.replace('{body}', () => body)}\n\n<!-- qq-github-bridge:${eventKey} -->`
@@ -138,8 +187,10 @@ export class GitHub {
   }
 
   async comment(repo: Repository, number: number, actor: Actor, body: string, eventKey: string): Promise<Outcome> {
-    const comment = this.formatComment(actor, body, eventKey)
+    if (this.containsSecret(body)) throw new BridgeError('secret-in-body', '评论包含部署凭据，已拒绝发送。请移除敏感信息。')
     const issue = await this.target(repo, number)
+    const comment = this.formatComment(actor, body, eventKey)
+    if (this.containsSecret(comment)) throw new BridgeError('secret-in-body', '评论包含部署凭据，已拒绝发送。请移除敏感信息。')
     const result = await this.request<{ id?: number; html_url?: unknown }>('POST', `${this.path(repo)}/issues/${number}/comments`, { body: comment })
     const link = this.link(result?.html_url)
     if (!link || !Number.isSafeInteger(result?.id) || result.id! <= 0) {
@@ -171,8 +222,17 @@ export class GitHub {
   }
 
   async validate(repo?: Repository): Promise<TokenStatus> {
-    const user = await this.request<{ login: string }>('GET', '/user')
-    if (!user || !/^[A-Za-z0-9][A-Za-z0-9-]{0,99}$/.test(user.login)) throw new BridgeError('github-response', 'Token 验证响应无效，请检查 API 地址。')
+    let login: string
+    if (this.config.authMode === 'app') {
+      const app = await this.appRequest<{ slug?: unknown }>('GET', '/app', this.jwt())
+      if (typeof app?.slug !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9-]{0,99}$/.test(app.slug)) throw new BridgeError('github-response', 'GitHub App 身份响应无效。')
+      await this.credential()
+      login = `${app.slug}[bot]`
+    } else {
+      const user = await this.request<{ login: string }>('GET', '/user')
+      if (!user || !/^[A-Za-z0-9][A-Za-z0-9-]{0,99}$/.test(user.login)) throw new BridgeError('github-response', 'Token 验证响应无效，请检查 API 地址。')
+      login = user.login
+    }
     const repositories: TokenStatus['repositories'] = []
     if (repo) {
       try {
@@ -184,6 +244,6 @@ export class GitHub {
         repositories.push({ repository: repo.fullName, accessible: false, message: error.message })
       }
     }
-    return { login: redact(user.login, this.config.token), repositories, message: 'Token 身份已验证。只读检测不能证明写权限；Issues 和 Pull requests 均需 Read and write。' }
+    return { login: redact(login, this.config.token), repositories, message: 'GitHub 身份已验证。只读检测不能证明写权限；Issues 和 Pull requests 均需 Read and write。' }
   }
 }

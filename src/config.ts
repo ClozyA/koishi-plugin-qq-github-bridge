@@ -1,4 +1,5 @@
 import { Schema } from 'koishi'
+import { createPrivateKey } from 'node:crypto'
 import { BridgeError } from './utils/errors'
 
 export const QQ_PATTERN = /^[1-9][0-9]{4,19}$/
@@ -12,7 +13,11 @@ export interface Binding {
 }
 
 export interface Config {
+  authMode: 'pat' | 'app'
   token: string
+  appId: string
+  installationId: string
+  privateKey: string
   apiBaseUrl: string
   apiVersion: string
   requestTimeout: number
@@ -41,7 +46,11 @@ const qq = () => Schema.string().pattern(QQ_PATTERN).description('真实数字 Q
 
 export const Config: Schema<Partial<Config>, Config> = Schema.intersect([
   Schema.object({
+    authMode: Schema.union(['pat', 'app']).default('pat').description('认证方式：PAT 或 GitHub App。'),
     token: Schema.string().role('secret').default('').description('统一 GitHub Personal Access Token。支持 Fine-grained PAT；不要在 QQ 中发送。'),
+    appId: Schema.string().default('').description('GitHub App 的 App ID（数字）。'),
+    installationId: Schema.string().default('').description('GitHub App 安装 ID（数字），对应一个账号或组织的安装。'),
+    privateKey: Schema.string().role('secret').default('').description('GitHub App PEM 私钥；单行输入框可用字面量 \\n 表示换行。请妥善保护 Koishi 配置。'),
     apiBaseUrl: Schema.string().default('https://api.github.com').description('GitHub REST API 根地址；企业版通常为 https://主机/api/v3。必须使用 HTTPS（本机测试除外）。'),
     apiVersion: Schema.string().default('2026-03-10').description('GitHub API 版本。企业版可按服务器支持情况修改。'),
     requestTimeout: Schema.number().min(1000).max(60000).step(1).default(15000).description('单次请求超时（毫秒）。写入不会自动重试。'),
@@ -81,8 +90,15 @@ export const Config: Schema<Partial<Config>, Config> = Schema.intersect([
 
 export function validateConfig(config: Config) {
   const invalid = (message: string): never => { throw new BridgeError('config', message) }
-  if (!config.token || config.token.length > 500 || /\s|[^\x21-\x7e]/.test(config.token)) {
-    invalid('请在后台填写有效格式的 GitHub Token（不可为空或包含空白）。')
+  if (config.authMode === 'pat') {
+    if (!config.token || config.token.length > 16384 || /\s|[^\x21-\x7e]/.test(config.token)) invalid('请在后台填写有效格式的 GitHub Token（不可为空或包含空白）。')
+  } else if (config.authMode === 'app') {
+    if (!/^[1-9]\d{0,19}$/.test(config.appId) || !/^[1-9]\d{0,19}$/.test(config.installationId)) invalid('请填写有效的 GitHub App ID 和安装 ID。')
+    try {
+      if (config.privateKey.length > 16384 || createPrivateKey(config.privateKey.replace(/\\n/g, '\n')).asymmetricKeyType !== 'rsa') invalid('GitHub App 私钥必须是有效的 RSA PEM 私钥。')
+    } catch { invalid('GitHub App 私钥必须是有效的 RSA PEM 私钥。') }
+  } else {
+    invalid('请选择有效的 GitHub 认证方式。')
   }
   let base: URL
   try { base = new URL(config.apiBaseUrl) } catch { return invalid('GitHub API 地址不是有效 URL。') }
@@ -106,6 +122,6 @@ export function validateConfig(config: Config) {
   }
   if (config.commentTemplate.length > 4000 || config.commentTemplate.split('{body}').length !== 2) invalid('评论模板最多 4000 字符，并且必须且只能包含一次 {body}。')
   if (/\{(?!body\})[^{}]*\}/.test(config.commentTemplate)) invalid('评论模板仅支持 {body} 占位符。')
-  if (config.commentTemplate.includes(config.token)) invalid('评论模板不能包含 GitHub Token。')
+  if ((config.token && config.commentTemplate.includes(config.token)) || (config.privateKey && (config.commentTemplate.includes(config.privateKey) || config.commentTemplate.includes(config.privateKey.replace(/\\n/g, '\n'))))) invalid('评论模板不能包含 GitHub 凭据。')
   return config
 }

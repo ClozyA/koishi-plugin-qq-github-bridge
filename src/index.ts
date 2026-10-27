@@ -12,7 +12,7 @@ export const usage = `
 通过 OneBot / NapCat QQ 群评论、关闭和重开 GitHub Issue / PR。
 
 1. 启用持久数据库（推荐 database-sqlite）、OneBot 适配器。
-2. 填写统一 GitHub Token、至少一位超级管理员、群与仓库绑定。
+2. 配置 GitHub PAT 或 GitHub App、至少一位超级管理员、群与仓库绑定。
 3. 启用官方 console 和 auth，并用部署管理员账号登录，左侧即可打开「QQ GitHub Bridge」维护管理员、查看审计和验证 Token。
 
 默认高风险操作需要同一 QQ 在原群发送确认码。详细命令与权限说明见 README。

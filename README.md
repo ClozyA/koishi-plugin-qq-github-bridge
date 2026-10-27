@@ -49,13 +49,13 @@ npm install "C:\你的下载目录\koishi-plugin-qq-github-bridge-1.0.0.tgz"
 首次启用在 Koishi 后台完成：
 
 1. 启用 `http`、持久数据库，以及已连接的 OneBot 适配器。SQLite 只需本地数据库文件，不需要另开数据库服务。
-2. 在本插件「GitHub 设置」填写统一 Token；默认 API 为 `https://api.github.com`。
+2. 在本插件「GitHub 设置」选择 PAT 或 GitHub App 并填写对应凭据；默认 API 为 `https://api.github.com`。
 3. 在「独立权限设置」填写至少一个超级管理员 QQ。填真实数字 QQ，不能填 Koishi 用户 ID、昵称或 QQ UID。
 4. 在「仓库绑定」添加群号、Owner、仓库名并启用。例：`345678901` → `example/project`。
 5. 启用官方 `console` 与 `auth`，以部署管理员登录，打开左侧 **QQ GitHub Bridge**。
 6. 使用「检查连接」验证 Token 身份与选定仓库的可读性。写权限仍需按下文配置。
 
-普通使用者不需要 GitHub 账号或 Token。所有 GitHub 操作显示为 Token 所属账号执行；评论固定身份头和操作审计记录真实 QQ 操作者。
+普通使用者不需要 GitHub 账号或 Token。GitHub 操作显示为 PAT 所属账号或 GitHub App 的 bot 身份；评论固定身份头和操作审计记录真实 QQ 操作者。
 
 ## GitHub Token
 
@@ -71,6 +71,23 @@ Fine-grained PAT 限定单个资源所有者，不能用一个这样的 Token �
 PR 的普通评论使用 Issues comments 接口，状态变更使用对应的 Issues / Pull requests 接口。[评论接口](https://docs.github.com/en/rest/issues/comments#create-an-issue-comment)、[Issue 状态接口](https://docs.github.com/en/rest/issues/issues#update-an-issue)、[PR 状态接口](https://docs.github.com/en/rest/pulls/pulls#update-a-pull-request)
 
 不要把 Token 发到 QQ。插件配置使用 secret 输入框；管理页面、审计和对外错误不会返回 Token。部署者仍需保护 Koishi 配置文件、备份和控制台登录账户。
+
+## GitHub App 认证
+
+GitHub App 可以使用 `应用名[bot]` 身份操作，无需单独注册机器人用户。已有 PAT 配置默认仍使用 PAT。
+
+1. 在 GitHub 开发者设置中创建 GitHub App，填写名称和主页；不使用 webhook 时可取消 Active。仓库权限设置 Issues 和 Pull requests 为 Read and write。
+2. 生成并下载 App 私钥，将 App 安装到目标组织或账号，授权需要操作的仓库。组织可能要求管理员批准安装或权限变更。
+3. 在插件「GitHub 设置」选择 `app`，填写 App ID、安装 ID，以及 PEM 私钥文件的完整内容。安装 ID 可从 GitHub App 安装设置页面 URL 的 `/installations/数字` 中取得。若私钥输入框不接受多行，可用字面量 `\n` 代替换行。
+4. 启用插件后在后台选择仓库并检查连接。该检查验证 App 身份、令牌签发和仓库读取，不能证明写权限；请另行测试所需操作。
+
+插件会缓存安装令牌，并在到期前自动重新获取。一个配置只对应一个安装 ID，因此只能访问该安装已获授权的仓库；不同组织或账号通常需要各自的安装，当前不能在同一插件实例中混用多个安装。请保护私钥和 Koishi 配置文件，不要将私钥或令牌发到 QQ 或提交到仓库。
+
+如需转换私钥，可在 PowerShell 7 中执行下列命令，再粘贴到插件设置。剪贴板含有私钥，使用后应清除。
+
+```powershell
+((Get-Content -Raw -LiteralPath '私钥.pem').Trim() -replace "`r?`n", '\n') | Set-Clipboard
+```
 
 ## QQ 指令与角色
 
